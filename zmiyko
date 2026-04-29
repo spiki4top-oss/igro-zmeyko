@@ -1,0 +1,110 @@
+import pygame
+from random import randrange
+
+RES = 800
+SIZE = 50
+FPS = 60
+
+pygame.init()
+surface = pygame.display.set_mode((RES, RES))
+clock = pygame.time.Clock()
+font_score = pygame.font.SysFont('Arial', 26, bold=True)
+font_end = pygame.font.SysFont('Arial', 66, bold=True)
+
+# безопасная загрузка фона
+try:
+    img = pygame.image.load('1.jpg').convert()
+except:
+    img = pygame.Surface((RES, RES))
+    img.fill(pygame.Color('black'))
+
+
+def new_game():
+    x = randrange(0, RES, SIZE)
+    y = randrange(0, RES, SIZE)
+    snake = [(x, y)]
+    dx, dy = 1, 0
+    length = 1
+    score = 0
+    snake_speed = 10
+
+    apple = randrange(0, RES, SIZE), randrange(0, RES, SIZE)
+    while apple in snake:
+        apple = randrange(0, RES, SIZE), randrange(0, RES, SIZE)
+
+    return x, y, dx, dy, snake, length, apple, score, snake_speed
+
+
+x, y, dx, dy, snake, length, apple, score, snake_speed = new_game()
+speed_count = 0
+game_over = False
+
+
+while True:
+    # --- события ---
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            exit()
+
+        if event.type == pygame.KEYDOWN:
+            if not game_over:
+                if event.key == pygame.K_w and dy != 1:
+                    dx, dy = 0, -1
+                elif event.key == pygame.K_s and dy != -1:
+                    dx, dy = 0, 1
+                elif event.key == pygame.K_a and dx != 1:
+                    dx, dy = -1, 0
+                elif event.key == pygame.K_d and dx != -1:
+                    dx, dy = 1, 0
+            else:
+                if event.key == pygame.K_r:
+                    x, y, dx, dy, snake, length, apple, score, snake_speed = new_game()
+                    speed_count = 0
+                    game_over = False
+
+    surface.blit(img, (0, 0))
+
+    if not game_over:
+        # --- движение ---
+        speed_count += 1
+        if speed_count % snake_speed == 0:
+            x += dx * SIZE
+            y += dy * SIZE
+            snake.append((x, y))
+            snake = snake[-length:]
+
+        # --- съели яблоко ---
+        if snake[-1] == apple:
+            length += 1
+            score += 1
+
+            apple = randrange(0, RES, SIZE), randrange(0, RES, SIZE)
+            while apple in snake:
+                apple = randrange(0, RES, SIZE), randrange(0, RES, SIZE)
+
+            if score % 5 == 0:
+                snake_speed = max(5, snake_speed - 1)
+
+        # --- проверка проигрыша ---
+        if (x < 0 or x >= RES or y < 0 or y >= RES or
+                len(snake) != len(set(snake))):
+            game_over = True
+
+    # --- отрисовка ---
+    for i, j in snake:
+        pygame.draw.rect(surface, pygame.Color('green'), (i, j, SIZE - 1, SIZE - 1))
+
+    pygame.draw.rect(surface, pygame.Color('red'), (*apple, SIZE, SIZE))
+
+    score_text = font_score.render(f'SCORE: {score}', True, pygame.Color('orange'))
+    surface.blit(score_text, (5, 5))
+
+    if game_over:
+        end_text = font_end.render('GAME OVER', True, pygame.Color('orange'))
+        surface.blit(end_text, (RES // 2 - 200, RES // 3))
+
+        restart_text = font_score.render('Press R to restart', True, pygame.Color('white'))
+        surface.blit(restart_text, (RES // 2 - 140, RES // 2))
+
+    pygame.display.flip()
+    clock.tick(FPS)
